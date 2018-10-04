@@ -89,7 +89,9 @@ class UltimateBoard():
         self.x_turn = x_turn 
         self.history = []
         self.meta_history = []
-        self.model = pickle.load(open('gbm_x_wins','rb'))
+        self.winner = None
+   #     self.model = pickle.load(open('gbm_x_wins','rb'))
+        self._int2lab = {1:'X', 2:'O', 0:'-'}
         
     def play(self, board, pos, label):
         if board not in self.active_boards:
@@ -137,7 +139,6 @@ class UltimateBoard():
         if self.meta_board.game_over:
             if self.meta_board.won:
                 self.winner = label
-
             else:
                 self.winner = 'Cat'
                 
@@ -157,7 +158,7 @@ class UltimateBoard():
         for i, mv in enumerate(self.history):
             big_board[mv[0]*9 + mv[1]] = mv[2]
             app_list = list(big_board) + list(self.meta_history[i])
-            if self.won:
+            if self.winner is not None:
                 app_list.append(self.winner)
             final_res.append(app_list)
             
@@ -166,13 +167,23 @@ class UltimateBoard():
     def undo_move(self):
         if len(self.history) == 0:
             raise ValueError("No moves to undo")
+            
         board, cell, player = self.history[-1]
         self.boards[board].undo_move()
         self.history = self.history[:-1]
-        last_valid_move = self.history[-1]
+        
+        # need early return for checking first move
+        # comes up when playing computer vs. computer
+        try:
+            last_valid_move = self.history[-1]
+        except IndexError:
+            self.x_turn = self._int2lab[player] == 'X'
+            self.active_boards = set(range(9))
+            return
         
         lv_board, lv_cell, lv_player = last_valid_move
-        self.x_turn = True if lv_player == 2 else False
+        self.x_turn = lv_player == 2 
+        
         if self.boards[lv_cell].game_over:
             self.active_boards = {i for i in range(9) \
                                   if not self.boards[i].game_over}
@@ -182,8 +193,7 @@ class UltimateBoard():
         last_meta_board = self.meta_history[-1]
         self.meta_history = self.meta_history[:-1]
         
-        if list(last_meta_board) != list(self.meta_history[-1]):  
-           # print(len(self.meta_history))
+        if list(last_meta_board) != list(self.meta_history[-1]): 
             self.meta_board.undo_move()
             
     def make_move(self, label, kind='model'):
