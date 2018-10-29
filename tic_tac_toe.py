@@ -227,3 +227,13 @@ class UltimateBoard():
             all_rows.append('\n'.join(top_rows))
         
         return ('\n' + '-'*17 + '\n').join(all_rows)
+    
+    def sim_game(self):
+        
+        while not self.game_over:
+
+            lab = 'X' if self.x_turn else 'O'
+            brd = np.random.choice(list(self.active_boards), size=1)[0]
+            pos = np.random.choice(list(self.boards[brd].remaining_squares), size=1)[0]
+
+            self.play(brd, pos, lab)
